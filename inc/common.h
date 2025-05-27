@@ -15,7 +15,7 @@
 #define MAX_MUTEXES 20
 #define MAX_CLIENTS 50
 #define BUFFER_SIZE 2048
-#define SERVER_PORT 8888
+#define SERVER_PORT 8080
 #define MAX_MUTEX_NAME 64
 #define MAX_MSG_SIZE 1024
 
