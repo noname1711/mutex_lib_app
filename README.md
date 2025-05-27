@@ -12,6 +12,8 @@ Now, we can build a server by command:
 ```bash
 ./bin/server
 ```
+1 client should be create and lock only 1 mutex, prevent deadlock 
+
 And another terminal, build client:
 ```bash
 ./bin/client
