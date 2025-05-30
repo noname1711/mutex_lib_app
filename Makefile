@@ -1,4 +1,4 @@
-.PHONY: all server client lib clean directories
+.PHONY: all server client lib clean directories web
 
 CC = gcc
 CFLAGS = -Wall -Wextra -I./inc -g
@@ -25,7 +25,11 @@ LIB_NAME = $(LIB_DIR)/libmutex.a
 SERVER_TARGET = $(BIN_DIR)/server
 CLIENT_TARGET = $(BIN_DIR)/client
 
-all: directories lib server client
+WEB_SRC = $(SRC_DIR)/web_server.c
+WEB_OBJ = $(OBJ_DIR)/web_server.o
+WEB_TARGET = $(BIN_DIR)/web_server
+
+all: directories lib server client web_server
 
 directories:
 	mkdir -p $(OBJ_DIR) $(LIB_DIR) $(BIN_DIR)
@@ -38,6 +42,13 @@ server: $(SERVER_OBJ) $(LIB_NAME)
 
 client: $(CLIENT_OBJ) $(LIB_NAME)
 	$(CC) $(CFLAGS) $^ -o $(CLIENT_TARGET) $(LDFLAGS)
+
+web_server: $(WEB_OBJ) $(LIB_NAME)
+	$(CC) $(CFLAGS) $^ -o $(WEB_TARGET) $(LDFLAGS) -lmicrohttpd 
+
+web:
+	@echo "Starting web server on http://localhost:8000"
+	@python3 -m http.server 8000 --directory web/
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@

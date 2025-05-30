@@ -1,0 +1,135 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+#container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#server {
+    width: 100px;
+    height: 100px;
+    background: #4CAF50;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    margin: 20px;
+}
+
+.client {
+    width: 80px;
+    height: 80px;
+    background: #2196F3;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    margin: 10px;
+}
+
+.client.locked {
+    background: #FF5722;
+}
+
+#clients {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#mutex-list {
+    margin-top: 20px;
+    width: 80%;
+    max-width: 600px;
+}
+
+.mutex-item {
+    padding: 10px;
+    margin: 5px 0;
+    background: #f5f5f5;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.mutex-item.locked {
+    background: #ffebee;
+}
+
+.mutex-name {
+    font-weight: bold;
+}
+
+.mutex-status {
+    padding: 2px 8px;
+    border-radius: 3px;
+    color: white;
+}
+
+.status-locked {
+    background: #f44336;
+}
+
+.status-unlocked {
+    background: #4CAF50;
+}
+
+.message-arrow {
+    position: absolute;
+    height: 2px;
+    background-color: #FF5722;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    z-index: 100;
+    pointer-events: none;
+    transform-origin: left center;
+}
+
+.message-arrow::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -4px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid #FF5722;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+}
+
+.message-arrow {
+    position: fixed;
+    height: 2px;
+    background-color: #FF5722;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    z-index: 100;
+    pointer-events: none;
+    transform-origin: left center;
+    transition: opacity 0.5s;
+}
+
+.message-arrow::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    background-color: #FF5722;
+    transform: translateY(-50%) rotate(45deg);
+    top: 50%;
+}

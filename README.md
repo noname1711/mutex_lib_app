@@ -18,3 +18,8 @@ And another terminal, build client:
 ```bash
 ./bin/client
 ```
+
+Run web to see monitor: 
+```bash
+make web
+```

@@ -1,9 +1,9 @@
 #include "../inc/mutex.h"
 #include "../inc/common.h"
 
-static Mutex mutexes[MAX_MUTEXES];
-static int mutex_count = 0;
-static pthread_mutex_t global_mutex_lock = PTHREAD_MUTEX_INITIALIZER;
+Mutex mutexes[MAX_MUTEXES];
+int mutex_count = 0;
+pthread_mutex_t global_mutex_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void mutex_init() {
     pthread_mutex_lock(&global_mutex_lock);
@@ -189,6 +189,10 @@ int mutex_send(const char* name, int client_pid, const char* message,
                 welcome_msg[welcome_size - 1] = '\0';
             }
             
+            // add info about mes  to mutex
+            strncpy(mutexes[i].last_message, message, MAX_MSG_SIZE);
+            mutexes[i].last_message_time = time(NULL);
+
             pthread_mutex_unlock(&global_mutex_lock);
             return 0;
         }

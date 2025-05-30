@@ -1,14 +1,15 @@
 #include "../inc/common.h"
 #include "../inc/mutex.h"
 #include <signal.h>
+#include <sys/select.h>
 
 static int server_fd = -1;
+static int web_fd = -1;
 
 void cleanup() {
-    if (server_fd != -1) {
-        close(server_fd);
-        printf("Server socket closed\n");
-    }
+    if (server_fd != -1) close(server_fd);
+    if (web_fd != -1) close(web_fd);
+    printf("Server sockets closed\n");
 }
 
 void handle_signal(int sig) {
@@ -176,6 +177,60 @@ void* handle_client(void* arg) {
     return NULL;
 }
 
+void handle_web_client(int client_socket) {
+    char buffer[BUFFER_SIZE];
+    ssize_t bytes_received;
+    
+    bytes_received = recv(client_socket, buffer, sizeof(buffer), 0);
+    if (bytes_received <= 0) {
+        close(client_socket);
+        return;
+    }
+    
+    buffer[bytes_received] = '\0';
+    
+    if (strstr(buffer, "GET /mutexes")) {
+        char json_response[2048];
+        pthread_mutex_lock(&global_mutex_lock);
+        
+        // Build JSON response
+        snprintf(json_response, sizeof(json_response), 
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                "Access-Control-Allow-Origin: *\r\n"
+                "Connection: close\r\n\r\n"
+                "{\"mutexes\":[");
+        
+        for (int i = 0; i < mutex_count; i++) {
+            char time_buf[20];
+            if (mutexes[i].lock_time > 0) {
+                strftime(time_buf, sizeof(time_buf), "%H:%M:%S", localtime(&mutexes[i].lock_time));
+            } else {
+                strcpy(time_buf, "null");
+            }
+            
+            char mutex_json[256];
+            
+            snprintf(mutex_json, sizeof(mutex_json), 
+                    "%s{\"name\":\"%s\",\"owner\":%d,\"locked\":%s,\"last_message\":\"%.50s\"}",
+                    (i > 0) ? "," : "",
+                    mutexes[i].name,
+                    mutexes[i].owner_pid,
+                    mutexes[i].is_locked ? "true" : "false",
+                    mutexes[i].last_message);
+            
+            strncat(json_response, mutex_json, sizeof(json_response) - strlen(json_response) - 1);
+        }
+        
+        strcat(json_response, "]}");
+        pthread_mutex_unlock(&global_mutex_lock);
+        
+        send(client_socket, json_response, strlen(json_response), 0);
+    }
+    
+    close(client_socket);
+}
+
 int main() {
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
@@ -187,13 +242,12 @@ int main() {
     
     mutex_init();
     
-    // Create server socket
+    // Create main server socket
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
     
-    // Set socket options
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
         perror("setsockopt");
         exit(EXIT_FAILURE);
@@ -203,38 +257,66 @@ int main() {
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(SERVER_PORT);
     
-    // Bind socket to port
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
     
-    // Start listening
     if (listen(server_fd, MAX_CLIENTS) < 0) {
         perror("listen");
         exit(EXIT_FAILURE);
     }
     
-    printf("Server started on port %d. Waiting for connections...\n", SERVER_PORT);
+    // Create web interface socket (main port + 1)
+    if ((web_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("web socket failed");
+        exit(EXIT_FAILURE);
+    }
     
+    struct sockaddr_in web_addr = address;
+    web_addr.sin_port = htons(SERVER_PORT + 1);
+    
+    if (bind(web_fd, (struct sockaddr *)&web_addr, sizeof(web_addr)) < 0) {
+        perror("web bind failed");
+        exit(EXIT_FAILURE);
+    }
+    
+    if (listen(web_fd, 5) < 0) {
+        perror("web listen");
+        exit(EXIT_FAILURE);
+    }
+    
+    printf("Server started:\n- Mutex port: %d\n- Web port: %d\n", 
+           SERVER_PORT, SERVER_PORT + 1);
+    
+    fd_set readfds;
     while (1) {
-        int* client_socket = malloc(sizeof(int));
-        if ((*client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
-            perror("accept");
-            free(client_socket);
+        FD_ZERO(&readfds);
+        FD_SET(server_fd, &readfds);
+        FD_SET(web_fd, &readfds);
+        
+        int max_fd = (server_fd > web_fd) ? server_fd : web_fd;
+        
+        if (select(max_fd + 1, &readfds, NULL, NULL, NULL) < 0) {
+            perror("select");
             continue;
         }
         
-        printf("New connection from %s\n", inet_ntoa(address.sin_addr));
-        
-        pthread_t thread_id;
-        if (pthread_create(&thread_id, NULL, handle_client, (void*)client_socket) != 0) {
-            perror("pthread_create");
-            close(*client_socket);
-            free(client_socket);
+        // Handle mutex clients
+        if (FD_ISSET(server_fd, &readfds)) {
+            int* client_socket = malloc(sizeof(int));
+            *client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
+            
+            pthread_t thread_id;
+            pthread_create(&thread_id, NULL, handle_client, (void*)client_socket);
+            pthread_detach(thread_id);
         }
         
-        pthread_detach(thread_id);
+        // Handle web clients
+        if (FD_ISSET(web_fd, &readfds)) {
+            int web_client = accept(web_fd, NULL, NULL);
+            handle_web_client(web_client);
+        }
     }
     
     return 0;

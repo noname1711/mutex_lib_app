@@ -13,11 +13,12 @@
 #include <pthread.h>
 
 #define MAX_MUTEXES 20
-#define MAX_CLIENTS 50
+#define MAX_CLIENTS 20
 #define BUFFER_SIZE 2048
 #define SERVER_PORT 8080
 #define MAX_MUTEX_NAME 64
 #define MAX_MSG_SIZE 1024
+
 
 typedef enum {
     CMD_HELP,
@@ -36,6 +37,8 @@ typedef struct {
     int owner_pid;
     bool is_locked;
     time_t lock_time;
+    char last_message[MAX_MSG_SIZE];  
+    time_t last_message_time;         
 } Mutex;
 
 typedef struct {
@@ -44,5 +47,9 @@ typedef struct {
     char message[MAX_MSG_SIZE];
     int client_pid;
 } ClientCommand;
+
+extern Mutex mutexes[MAX_MUTEXES];
+extern pthread_mutex_t global_mutex_lock;
+extern int mutex_count;
 
 #endif 
