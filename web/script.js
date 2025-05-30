@@ -153,24 +153,44 @@ function updateArrowPositions() {
     if (!server) return;
 
     const serverRect = server.getBoundingClientRect();
-    const serverX = serverRect.left + serverRect.width / 2;
-    const serverY = serverRect.top + serverRect.height / 2;
+    const serverRadius = serverRect.width / 2;
+    const serverCenterX = serverRect.left + serverRadius;
+    const serverCenterY = serverRect.top + serverRadius;
     
     activeMessages.forEach(msg => {
         const clientElement = document.getElementById(`client-${msg.pid}`);
         if (!clientElement || !msg.element) return;
         
         const clientRect = clientElement.getBoundingClientRect();
-        const clientX = clientRect.left + clientRect.width / 2;
-        const clientY = clientRect.top + clientRect.height / 2;
+        const clientRadius = clientRect.width / 2;
+        const clientCenterX = clientRect.left + clientRadius;
+        const clientCenterY = clientRect.top + clientRadius;
         
-        const angle = Math.atan2(serverY - clientY, serverX - clientX);
-        const length = Math.sqrt(Math.pow(serverX - clientX, 2) + Math.pow(serverY - clientY, 2));
+        // Tính vector hướng từ client tới server
+        const dx = serverCenterX - clientCenterX;
+        const dy = serverCenterY - clientCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
         
+        // Tính điểm bắt đầu từ viền client (clientEdge)
+        const clientEdgeX = clientCenterX + (dx / distance) * clientRadius;
+        const clientEdgeY = clientCenterY + (dy / distance) * clientRadius;
+        
+        // Tính điểm kết thúc tại viền server (serverEdge)
+        const serverEdgeX = serverCenterX - (dx / distance) * serverRadius;
+        const serverEdgeY = serverCenterY - (dy / distance) * serverRadius;
+        
+        // Tính toán chiều dài và góc
+        const arrowLength = Math.sqrt(
+            Math.pow(serverEdgeX - clientEdgeX, 2) + 
+            Math.pow(serverEdgeY - clientEdgeY, 2)
+        );
+        const angle = Math.atan2(serverEdgeY - clientEdgeY, serverEdgeX - clientEdgeX);
+        
+        // Áp dụng style
         Object.assign(msg.element.style, {
-            left: `${clientX}px`,
-            top: `${clientY}px`,
-            width: `${length}px`,
+            left: `${clientEdgeX}px`,
+            top: `${clientEdgeY}px`,
+            width: `${arrowLength}px`,
             transform: `rotate(${angle}rad)`
         });
     });
