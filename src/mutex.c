@@ -3,37 +3,45 @@
 
 Mutex mutexes[MAX_MUTEXES];
 int mutex_count = 0;
-pthread_mutex_t global_mutex_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t global_mutex_lock = PTHREAD_MUTEX_INITIALIZER; // Mutex static initialization  
+
 
 void mutex_init() {
-    pthread_mutex_lock(&global_mutex_lock);
+    // Lock the global mutex to prevent other threads from changing data
+    pthread_mutex_lock(&global_mutex_lock);  
+
     mutex_count = 0;
+
     for (int i = 0; i < MAX_MUTEXES; i++) {
-        mutexes[i].name[0] = '\0';
-        mutexes[i].owner_pid = -1;
-        mutexes[i].is_locked = false;
-        mutexes[i].lock_time = 0;
+        mutexes[i].name[0] = '\0';  // Clear the name
+        mutexes[i].owner_pid = -1;  // No owner
+        mutexes[i].is_locked = false;  // Not locked
+        mutexes[i].lock_time = 0;   // No lock time
     }
+
+    //Unlock the global mutex
     pthread_mutex_unlock(&global_mutex_lock);
 }
 
+
 int mutex_create(const char* name, int client_pid) {
-    if (strlen(name) == 0) return -1;
+    if (strlen(name) == 0) return -1;   //If thread name empty
     
-    pthread_mutex_lock(&global_mutex_lock);
+    pthread_mutex_lock(&global_mutex_lock);  
     
-    if (mutex_count >= MAX_MUTEXES) {
+    if (mutex_count >= MAX_MUTEXES) {  //If too many mutexes
         pthread_mutex_unlock(&global_mutex_lock);
         return -2;
     }
 
-    for (int i = 0; i < mutex_count; i++) {
+    for (int i = 0; i < mutex_count; i++) {  //If mutex already exists
         if (strcmp(mutexes[i].name, name) == 0) {
             pthread_mutex_unlock(&global_mutex_lock);
             return -3;
         }
     }
 
+    // Add new mutex
     strncpy(mutexes[mutex_count].name, name, MAX_MUTEX_NAME - 1);
     mutexes[mutex_count].owner_pid = client_pid;
     mutexes[mutex_count].is_locked = false;
@@ -44,9 +52,11 @@ int mutex_create(const char* name, int client_pid) {
     return 0;
 }
 
+
 int mutex_lock(const char* name, int client_pid) {
+
     pthread_mutex_lock(&global_mutex_lock);
-    
+
     for (int i = 0; i < mutex_count; i++) {
         if (strcmp(mutexes[i].name, name) == 0) {
             if (mutexes[i].is_locked) {
@@ -57,18 +67,21 @@ int mutex_lock(const char* name, int client_pid) {
                 pthread_mutex_unlock(&global_mutex_lock);
                 return -1; // Locked by another client
             }
-            
+
+            // Lock the mutex
             mutexes[i].is_locked = true;
             mutexes[i].owner_pid = client_pid;
             mutexes[i].lock_time = time(NULL);
+
             pthread_mutex_unlock(&global_mutex_lock);
-            return 0;
+            return 0;  // Successfully locked the mutex
         }
     }
     
     pthread_mutex_unlock(&global_mutex_lock);
     return -2; // Mutex not found
 }
+
 
 int mutex_unlock(const char* name, int client_pid) {
     pthread_mutex_lock(&global_mutex_lock);
@@ -84,16 +97,19 @@ int mutex_unlock(const char* name, int client_pid) {
                 return -2; // Not owned by this client
             }
             
+            // Unlock the mutex
             mutexes[i].is_locked = false;
             mutexes[i].lock_time = 0;
+
             pthread_mutex_unlock(&global_mutex_lock);
-            return 0;
+            return 0; // Successfully unlocked the mutex
         }
     }
     
     pthread_mutex_unlock(&global_mutex_lock);
     return -3; // Mutex not found
 }
+
 
 int mutex_delete(const char* name, int client_pid) {
     pthread_mutex_lock(&global_mutex_lock);
@@ -109,15 +125,17 @@ int mutex_delete(const char* name, int client_pid) {
             for (int j = i; j < mutex_count - 1; j++) {
                 mutexes[j] = mutexes[j + 1];
             }
-            mutex_count--;
+
+            mutex_count--;  
             pthread_mutex_unlock(&global_mutex_lock);
-            return 0;
+            return 0;  // Successfully deleted the mutex
         }
     }
     
     pthread_mutex_unlock(&global_mutex_lock);
     return -2; // Mutex not found
 }
+
 
 void mutex_list(char* buffer, size_t buf_size) {
     pthread_mutex_lock(&global_mutex_lock);
@@ -132,6 +150,7 @@ void mutex_list(char* buffer, size_t buf_size) {
     size_t offset = strlen(header);
     strncpy(buffer, header, buf_size - 1);
     
+    // Add mutex info
     for (int i = 0; i < mutex_count && offset < buf_size - 200; i++) {
         char line[200];
         char time_buf[20];
@@ -156,12 +175,14 @@ void mutex_list(char* buffer, size_t buf_size) {
     pthread_mutex_unlock(&global_mutex_lock);
 }
 
+
 int mutex_send(const char* name, int client_pid, const char* message, 
                char* response, size_t resp_size, char* welcome_msg, size_t welcome_size) {
     pthread_mutex_lock(&global_mutex_lock);
     
     for (int i = 0; i < mutex_count; i++) {
         if (strcmp(mutexes[i].name, name) == 0) {
+            // Check permissions
             if (!mutexes[i].is_locked || mutexes[i].owner_pid != client_pid) {
                 pthread_mutex_unlock(&global_mutex_lock);
                 snprintf(response, resp_size, "Cannot send: you don't own mutex '%.20s'", name);
@@ -203,6 +224,7 @@ int mutex_send(const char* name, int client_pid, const char* message,
     return -2;
 }
 
+
 bool mutex_has_permission(const char* name, int client_pid) {
     pthread_mutex_lock(&global_mutex_lock);
     
@@ -215,9 +237,11 @@ bool mutex_has_permission(const char* name, int client_pid) {
     }
     
     pthread_mutex_unlock(&global_mutex_lock);
-    return false;
+    return false;  // Mutex not found, no permission
 }
 
+
+// Convert a command string to CommandType enum value
 CommandType parse_command(const char* cmd) {
     if (strcasecmp(cmd, "help") == 0) return CMD_HELP;
     if (strcasecmp(cmd, "create") == 0) return CMD_CREATE;
@@ -230,6 +254,8 @@ CommandType parse_command(const char* cmd) {
     return CMD_INVALID;
 }
 
+
+// Convert CommandType enum value to string 
 const char* command_to_string(CommandType cmd) {
     switch (cmd) {
         case CMD_HELP: return "HELP";
@@ -243,6 +269,7 @@ const char* command_to_string(CommandType cmd) {
         default: return "INVALID";
     }
 }
+
 
 void print_help() {
     printf("\nAvailable commands:\n");

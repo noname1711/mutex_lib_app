@@ -23,3 +23,4 @@ Run web to see monitor:
 ```bash
 make web
 ```
+And copy address to see

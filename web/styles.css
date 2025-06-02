@@ -110,17 +110,17 @@ body {
 
 .message-arrow {
     position: fixed;
-    height: 3px; /* Dày hơn một chút */
+    height: 3px; 
     background-color: #FF5722;
-    color: white;
+    color: black;
     font-size: 12px;
     display: flex;
     align-items: center;
-    padding-left: 15px; /* Đẩy text ra xa điểm bắt đầu */
+    padding-left: 15px; 
     z-index: 100;
     pointer-events: none;
     transform-origin: left center;
-    border-radius: 3px; /* Bo góc */
+    border-radius: 3px; 
     transition: all 0.3s ease-out;
     opacity: 0.9;
     box-shadow: 0 0 5px rgba(255, 87, 34, 0.7);
@@ -135,11 +135,11 @@ body {
 .message-arrow::before {
     content: '';
     position: absolute;
-    right: -5px; /* Điều chỉnh vị trí mũi tên */
+    right: -5px; 
     width: 10px;
     height: 10px;
     background-color: #FF5722;
-    clip-path: polygon(0 0, 100% 50%, 0 100%); /* Tạo hình tam giác */
+    clip-path: polygon(0 0, 100% 50%, 0 100%); 
     transform: translateY(-50%);
     top: 50%;
 }
