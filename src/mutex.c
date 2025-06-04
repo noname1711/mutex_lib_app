@@ -57,6 +57,14 @@ int mutex_lock(const char* name, int client_pid) {
 
     pthread_mutex_lock(&global_mutex_lock);
 
+    // If any mutex is locked and does not belong to this client, do not lock other mutexes
+    for (int i = 0; i < mutex_count; i++) {
+        if (mutexes[i].is_locked && mutexes[i].owner_pid != client_pid) {
+            pthread_mutex_unlock(&global_mutex_lock);
+            return -3; // There is another mutex locked by another client
+        }
+    }
+
     for (int i = 0; i < mutex_count; i++) {
         if (strcmp(mutexes[i].name, name) == 0) {
             if (mutexes[i].is_locked) {

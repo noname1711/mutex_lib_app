@@ -86,6 +86,8 @@ void* handle_client(void* arg) {
                 } else if (status == -1) {
                     snprintf(response, sizeof(response), 
                             "Mutex '%s' already locked by another client", cmd.mutex_name);
+                } else if (status == -3) {
+                    snprintf(response, sizeof(response), "There is already a mutex in the system");
                 } else {
                     snprintf(response, sizeof(response), "Mutex '%s' not found", cmd.mutex_name);
                 }
