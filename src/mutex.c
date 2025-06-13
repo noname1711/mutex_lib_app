@@ -70,7 +70,7 @@ int mutex_lock(const char* name, int client_pid) {
             if (mutexes[i].is_locked) {
                 if (mutexes[i].owner_pid == client_pid) {
                     pthread_mutex_unlock(&global_mutex_lock);
-                    return 0; // Already locked by this client
+                    return -2; // Already locked by this client
                 }
                 pthread_mutex_unlock(&global_mutex_lock);
                 return -1; // Locked by another client
